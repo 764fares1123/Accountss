@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شراء حسابات فيسبوك</title>
+    <style>
+        /* أنماط بسيطة */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+
+        input:focus, select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        #vodafone-number {
+            display: none;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .delete-button {
+            background-color: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .delete-button:hover {
+            background-color: #c0392b;
+        }
+
+        .confirm-button {
+            background-color: #2ecc71;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .confirm-button:hover {
+            background-color: #27ae60;
+        }
+
+        .confirmed {
+            background-color: #d4edda;
+        }
+
+        .delete-all-button {
+            background-color: #e74c3c;
+            color: white;
+            margin-top: 20px;
+        }
+
+        .delete-all-button:hover {
+            background-color: #c0392b;
+        }
+
+        .balance {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .withdraw-button {
+            background-color: #9b59b6;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .withdraw-button:hover {
+            background-color: #8e44ad;
+        }
+
+        .login-container {
+            display: block;
+        }
+
+        .register-container {
+            display: none;
+        }
+
+        .main-container {
+            display: none;
+        }
+
+        .admin-panel {
+            display: none;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        const adminUsername = "admin"; // اسم المستخدم للوحة التحكم
+        const adminPassword = "admin123"; // كلمة المرور للوحة التحكم
+        const pricePerAccount = 0.50; // 0.50 جنيه لكل حساب مؤكد
+        const minWithdrawAmount = 10; // الحد الأدنى للسحب: 10 جنيه
+
+        // تحميل الحسابات المسجلة من localStorage
+        let users = JSON.parse(localStorage.getItem("users")) || [];
+        let adminAccounts = JSON.parse(localStorage.getItem("adminAccounts")) || []; // قائمة الحسابات في لوحة التحكم
+        let withdrawRequests = JSON.parse(localStorage.getItem("withdrawRequests")) || []; // قائمة طلبات السحب
+        let currentUser = null;
+
+        // تسجيل الدخول
+        function login() {
+            const username = document.getElementById("login-username").value;
+            const password = document.getElementById("login-password").value;
+
+            if (username === adminUsername && password === adminPassword) {
+                // دخول إلى لوحة التحكم
+                document.getElementById("login-container").style.display = "none";
+                document.getElementById("admin-panel").style.display = "block";
+                loadAdminAccounts(); // تحميل الحسابات في لوحة التحكم
+                loadWithdrawRequests(); // تحميل طلبات السحب
+            } else {
+                // دخول إلى الصفحة الرئيسية
+                const user = users.find(u => u.username === username && u.password === password);
+                if (user) {
+                    currentUser = user;
+                    document.getElementById("login-container").style.display = "none";
+                    document.getElementById("main-container").style.display = "block";
+                    updateBalance(); // تحديث الرصيد
+                } else {
+                    showAlert("❌ اسم المستخدم أو كلمة المرور غير صحيحة!", "error");
+                }
+            }
+        }
+
+        // تسجيل حساب جديد
+        function register() {
+            const username = document.getElementById("register-username").value;
+            const password = document.getElementById("register-password").value;
+
+            if (users.some(u => u.username === username)) {
+                showAlert("❌ اسم المستخدم موجود بالفعل!", "error");
+                return;
+            }
+
+            const newUser = { username, password, balance: 0 };
+            users.push(newUser);
+            localStorage.setItem("users", JSON.stringify(users));
+            showAlert("✅ تم تسجيل الحساب بنجاح! يمكنك تسجيل الدخول الآن.", "success");
+            showLogin(); // العودة إلى واجهة تسجيل الدخول
+        }
+
+        // إرسال الحساب إلى لوحة التحكم
+        function submitForm(event) {
+            event.preventDefault(); // منع إعادة تحميل الصفحة
+
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const phone = document.getElementById("phone").value;
+            const payment = document.getElementById("payment").value;
+            const vodafone = document.getElementById("vodafone").value;
+
+            const newAccount = {
+                email,
+                password,
+                phone,
+                payment,
+                vodafone: payment === "vodafone" ? vodafone : "",
+                confirmed: false,
+                sentBy: currentUser.username // اسم المستخدم الذي أرسل الحساب
+            };
+
+            // إضافة الحساب إلى قائمة الحسابات في لوحة التحكم
+            adminAccounts.push(newAccount);
+            localStorage.setItem("adminAccounts", JSON.stringify(adminAccounts));
+
+            showAlert("✅ تم إرسال الحساب بنجاح إلى لوحة التحكم!", "success");
+            document.getElementById("sell-form").style.display = "none"; // إخفاء النموذج
+        }
+
+        // تحميل الحسابات في لوحة التحكم
+        function loadAdminAccounts() {
+            const tableBody = document.getElementById("accounts-table");
+            tableBody.innerHTML = "";
+
+            if (adminAccounts.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="8">لا توجد حسابات مسجلة بعد.</td></tr>`;
+                return;
+            }
+
+            adminAccounts.forEach((account, index) => {
+                const row = `<tr class="${account.confirmed ? 'confirmed' : ''}">
+                    <td>${account.email}</td>
+                    <td>${account.password}</td>
+                    <td>${account.payment}</td>
+                    <td>${account.vodafone}</td>
+                    <td>${account.phone}</td>
+                    <td>${account.sentBy}</td>
+                    <td>
+                        <button class="confirm-button" onclick="confirmAccount(${index})">${account.confirmed ? '✔️ مؤكد' : 'تأكيد'}</button>
+                    </td>
+                    <td><button class="delete-button" onclick="deleteAccount(${index})">حذف</button></td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // تأكيد الحساب في لوحة التحكم
+        function confirmAccount(index) {
+            if (!adminAccounts[index].confirmed) {
+                adminAccounts[index].confirmed = true;
+                localStorage.setItem("adminAccounts", JSON.stringify(adminAccounts));
+
+                // إضافة المبلغ إلى رصيد المستخدم الذي أرسل الحساب
+                const sentByUser = users.find(u => u.username === adminAccounts[index].sentBy);
+                if (sentByUser) {
+                    sentByUser.balance += pricePerAccount;
+                    localStorage.setItem("users", JSON.stringify(users));
+                    showAlert(`✅ تم تأكيد الحساب وإضافة ${pricePerAccount.toFixed(2)} جنيه إلى رصيد ${sentByUser.username}!`, "success");
+                }
+
+                loadAdminAccounts(); // تحديث الجدول
+            } else {
+                showAlert("⚠️ هذا الحساب مؤكد بالفعل!", "error");
+            }
+        }
+
+        // حذف الحساب من لوحة التحكم
+        function deleteAccount(index) {
+            adminAccounts.splice(index, 1);
+            localStorage.setItem("adminAccounts", JSON.stringify(adminAccounts));
+            showAlert("✅ تم حذف الحساب بنجاح!", "success");
+            loadAdminAccounts();
+        }
+
+        // حذف جميع الحسابات
+        function deleteAllAccounts() {
+            adminAccounts = [];
+            localStorage.setItem("adminAccounts", JSON.stringify(adminAccounts));
+            showAlert("✅ تم حذف جميع الحسابات بنجاح!", "success");
+            loadAdminAccounts();
+        }
+
+        // تحديث الرصيد
+        function updateBalance() {
+            if (currentUser) {
+                document.getElementById("balance").innerText = `💰 الرصيد الحالي: ${currentUser.balance.toFixed(2)} جنيه`;
+            }
+        }
+
+        // طلب سحب الرصيد
+        function requestWithdraw() {
+            const walletNumber = document.getElementById("wallet-number").value;
+            const withdrawAmount = parseFloat(document.getElementById("withdraw-amount").value);
+
+            if (!walletNumber || !withdrawAmount) {
+                showAlert("❌ يرجى ملء جميع الحقول!", "error");
+                return;
+            }
+
+            if (withdrawAmount < minWithdrawAmount) {
+                showAlert(`❌ الحد الأدنى للسحب هو ${minWithdrawAmount} جنيه!`, "error");
+                return;
+            }
+
+            if (currentUser.balance < withdrawAmount) {
+                showAlert("❌ رصيدك غير كافي!", "error");
+                return;
+            }
+
+            // إنشاء طلب سحب
+            const newRequest = {
+                username: currentUser.username,
+                walletNumber,
+                amount: withdrawAmount,
+                status: "pending" // حالة الطلب: pending, approved, rejected
+            };
+
+            withdrawRequests.push(newRequest);
+            localStorage.setItem("withdrawRequests", JSON.stringify(withdrawRequests));
+
+            // خصم المبلغ من رصيد المستخدم
+            currentUser.balance -= withdrawAmount;
+            localStorage.setItem("users", JSON.stringify(users));
+
+            showAlert("✅ تم إرسال طلب السحب بنجاح!", "success");
+            updateBalance();
+            document.getElementById("withdraw-form").style.display = "none"; // إخفاء النموذج
+        }
+
+        // تحميل طلبات السحب في لوحة التحكم
+        function loadWithdrawRequests() {
+            const tableBody = document.getElementById("withdraw-table");
+            tableBody.innerHTML = "";
+
+            if (withdrawRequests.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5">لا توجد طلبات سحب حتى الآن.</td></tr>`;
+                return;
+            }
+
+            withdrawRequests.forEach((request, index) => {
+                const row = `<tr>
+                    <td>${request.username}</td>
+                    <td>${request.walletNumber}</td>
+                    <td>${request.amount.toFixed(2)} جنيه</td>
+                    <td>${request.status}</td>
+                    <td>
+                        <button class="confirm-button" onclick="approveWithdraw(${index})">✔️ قبول</button>
+                        <button class="delete-button" onclick="rejectWithdraw(${index})">❌ رفض</button>
+                    </td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // قبول طلب السحب
+        function approveWithdraw(index) {
+            withdrawRequests[index].status = "approved";
+            localStorage.setItem("withdrawRequests", JSON.stringify(withdrawRequests));
+            showAlert("✅ تم قبول طلب السحب بنجاح!", "success");
+            loadWithdrawRequests();
+        }
+
+        // رفض طلب السحب
+        function rejectWithdraw(index) {
+            const request = withdrawRequests[index];
+            const user = users.find(u => u.username === request.username);
+
+            if (user && request.status === "pending") {
+                user.balance += request.amount; // إعادة المبلغ إلى رصيد المستخدم
+                localStorage.setItem("users", JSON.stringify(users));
+            }
+
+            withdrawRequests.splice(index, 1);
+            localStorage.setItem("withdrawRequests", JSON.stringify(withdrawRequests));
+            showAlert("✅ تم رفض طلب السحب بنجاح!", "success");
+            loadWithdrawRequests();
+        }
+
+        // إظهار رسائل التنبيه
+        function showAlert(message, type) {
+            const alertDiv = document.createElement("div");
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.body.prepend(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // إظهار واجهة تسجيل الدخول
+        function showLogin() {
+            document.getElementById("register-container").style.display = "none";
+            document.getElementById("login-container").style.display = "block";
+        }
+
+        // إظهار واجهة التسجيل
+        function showRegister() {
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("register-container").style.display = "block";
+        }
+
+        // إظهار/إخفاء حقل فودافون كاش
+        function toggleVodafoneInput() {
+            const paymentMethod = document.getElementById("payment").value;
+            const vodafoneInput = document.getElementById("vodafone-number");
+            vodafoneInput.style.display = paymentMethod === "vodafone" ? "block" : "none";
+        }
+    </script>
+</head>
+<body>
+    <div id="login-container" class="container login-container">
+        <h2>تسجيل الدخول</h2>
+        <input type="text" id="login-username" placeholder="اسم المستخدم" required>
+        <input type="password" id="login-password" placeholder="كلمة المرور" required>
+        <button onclick="login()">تسجيل الدخول</button>
+        <p>ليس لديك حساب؟ <a href="#" onclick="showRegister()">سجل هنا</a></p>
+    </div>
+
+    <div id="register-container" class="container register-container" style="display: none;">
+        <h2>تسجيل حساب جديد</h2>
+        <input type="text" id="register-username" placeholder="اسم المستخدم" required>
+        <input type="password" id="register-password" placeholder="كلمة المرور" required>
+        <button onclick="register()">تسجيل</button>
+        <p>لديك حساب بالفعل؟ <a href="#" onclick="showLogin()">سجل الدخول هنا</a></p>
+    </div>
+
+    <div id="main-container" class="main-container" style="display: none;">
+        <div class="container">
+            <h2>مرحبًا بك، ${currentUser ? currentUser.username : ''}</h2>
+            <div id="balance" class="balance">💰 الرصيد الحالي: 0.00 جنيه</div>
+            <button class="sell-button" onclick="document.getElementById('sell-form').style.display='block'">💰 بيع الحسابات</button>
+            <button class="withdraw-button" onclick="document.getElementById('withdraw-form').style.display='block'">💳 طلب سحب الرصيد</button>
+        </div>
+
+        <div class="container" id="sell-form" style="display: none;">
+            <h2>💰 بيع حساب فيسبوك</h2>
+            <form onsubmit="submitForm(event)">
+                <label for="email">📧 الإيميل أو رقم الهاتف:</label>
+                <input type="text" id="email" name="email" required>
+                
+                <label for="password">🔑 كلمة المرور:</label>
+                <input type="text" id="password" name="password" value="fares1212" readonly required>
+                
+                <label for="phone">📱 رقم الهاتف:</label>
+                <input type="text" id="phone" name="phone" required>
+                
+                <label for="payment">💳 طريقة الدفع:</label>
+                <select id="payment" name="payment" onchange="toggleVodafoneInput()" required>
+                    <option value="vodafone">فودافون كاش</option>
+                    <option value="orange">أورنج كاش</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="crypto">عملات رقمية</option>
+                    <option value="wepay">وي باي</option>
+                    <option value="etisalat">اتصالات كاش</option>
+                </select>
+                
+                <div id="vodafone-number">
+                    <label for="vodafone">📱 رقم فودافون كاش:</label>
+                    <input type="text" id="vodafone" name="vodafone" placeholder="أدخل رقم فودافون كاش">
+                </div>
+                
+                <button type="submit">📩 إرسال الحساب</button>
+            </form>
+        </div>
+
+        <div class="container" id="withdraw-form" style="display: none;">
+            <h2>💳 طلب سحب الرصيد</h2>
+            <form onsubmit="event.preventDefault(); requestWithdraw();">
+                <label for="wallet-number">📱 رقم المحفظة:</label>
+                <input type="text" id="wallet-number" name="wallet-number" required>
+                
+                <label for="withdraw-amount">💸 مبلغ السحب:</label>
+                <input type="number" id="withdraw-amount" name="withdraw-amount" min="${minWithdrawAmount}" required>
+                
+                <button type="submit">📩 إرسال الطلب</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-panel" class="container admin-panel" style="display: none;">
+        <h2>لوحة التحكم - الحسابات المرسلة</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>📧 الإيميل</th>
+                    <th>🔑 كلمة المرور</th>
+                    <th>💳 الدفع</th>
+                    <th>📱 فودافون كاش</th>
+                    <th>📞 رقم الهاتف</th>
+                    <th>👤 المرسل</th>
+                    <th>✅ تأكيد</th>
+                    <th>❌ حذف</th>
+                </tr>
+            </thead>
+            <tbody id="accounts-table">
+            </tbody>
+        </table>
+        <button class="delete-all-button" onclick="deleteAllAccounts()">حذف جميع الحسابات</button>
+
+        <h2>طلبات السحب</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>👤 المستخدم</th>
+                    <th>📱 رقم المحفظة</th>
+                    <th>💸 المبلغ</th>
+                    <th>📊 الحالة</th>
+                    <th>⚙️ الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="withdraw-table">
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
